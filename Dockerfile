@@ -27,13 +27,13 @@ RUN curl -sSL https://get.helm.sh/helm-v3.14.2-linux-amd64.tar.gz -o helm.tar.gz
     rm -rf helm.tar.gz linux-amd64
 
 # Copy requirements file
-COPY driftguard/requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY driftguard/ .
+COPY . .
 
 # Create non-root user
 RUN adduser -D driftguard
