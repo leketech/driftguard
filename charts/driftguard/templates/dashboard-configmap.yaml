@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: driftguard-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "driftguard.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  driftguard-dashboard.json: |-
+    {
+      "dashboard": {
+        "id": null,
+        "title": "DriftGuard Observability",
+        "tags": ["driftguard", "drift", "infrastructure"],
+        "style": "dark",
+        "timezone": "utc",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Drift Events by Severity",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(driftguard_drift_by_severity[5m])",
+                "legendFormat": "{{ "{{" }}severity{{ "}}" }}",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Total Drift Events",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "increase(driftguard_drift_total[1h])",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "red", "value": 80}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 3,
+            "title": "Drift Events by Resource Type",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(driftguard_drift_by_resource[5m])",
+                "legendFormat": "{{ "{{" }}resource_type{{ "}}" }}",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Remediation Success Rate",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(driftguard_remediation_success_total[10m]) / rate(driftguard_remediation_attempts_total[10m])",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Scrape Duration",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(driftguard_scrape_duration_seconds_bucket[5m]))",
+                "legendFormat": "P95",
+                "refId": "A"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(driftguard_scrape_duration_seconds_bucket[5m]))",
+                "legendFormat": "P50",
+                "refId": "B"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Remediation Attempts vs Successes",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(driftguard_remediation_attempts_total[5m])",
+                "legendFormat": "Attempts",
+                "refId": "A"
+              },
+              {
+                "expr": "rate(driftguard_remediation_success_total[5m])",
+                "legendFormat": "Successes",
+                "refId": "B"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      },
+      "folder": "DriftGuard",
+      "overwrite": true
+    }

@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "driftguard.fullname" . }}-config
+  labels:
+    {{- include "driftguard.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    # DriftGuard Configuration
+    git:
+      repo_url: {{ .Values.config.git.repoUrl | quote }}
+      branch: {{ .Values.config.git.branch | quote }}
+    aws:
+      region: {{ .Values.config.aws.region | quote }}
+      account_id: {{ .Values.config.aws.accountId | default "" | quote }}
+      terraform_state_key: {{ .Values.config.aws.terraformStateKey | quote }}
+    github:
+      token: {{ .Values.config.github.token | quote }}
+    logging:
+      level: "INFO"
+      format: "json"
+      output: "stdout"
+    output:
+      format: "json"
+      destination: "stdout"
+    {{- if .Values.config.kafka }}
+    kafka:
+      bootstrap_servers: {{ .Values.config.kafka.bootstrap_servers | quote }}
+      security_protocol: {{ .Values.config.kafka.security_protocol | default "PLAINTEXT" | quote }}
+      sasl_mechanism: {{ .Values.config.kafka.sasl_mechanism | default "PLAIN" | quote }}
+      sasl_username: {{ .Values.config.kafka.sasl_username | default "" | quote }}
+      sasl_password: {{ .Values.config.kafka.sasl_password | default "" | quote }}
+      ssl_ca_location: {{ .Values.config.kafka.ssl_ca_location | default "" | quote }}
+      ssl_certificate_location: {{ .Values.config.kafka.ssl_certificate_location | default "" | quote }}
+      ssl_key_location: {{ .Values.config.kafka.ssl_key_location | default "" | quote }}
+      ssl_key_password: {{ .Values.config.kafka.ssl_key_password | default "" | quote }}
+      consumer_group: {{ .Values.config.kafka.consumer_group | default "driftguard-consumer-group" | quote }}
+    {{- end }}

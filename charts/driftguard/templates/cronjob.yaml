@@ -1,0 +1,65 @@
+{{- if .Values.schedule }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "driftguard.fullname" . }}
+  labels:
+    {{- include "driftguard.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "8000"
+            prometheus.io/path: "/metrics"
+        spec:
+          serviceAccountName: {{ include "driftguard.serviceAccountName" . }}
+          containers:
+          - name: {{ .Chart.Name }}
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            ports:
+              - name: metrics
+                containerPort: 8000
+                protocol: TCP
+            env:
+            - name: GIT_REPO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "driftguard.fullname" . }}-config
+                  key: git-repo-url
+            - name: GIT_BRANCH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "driftguard.fullname" . }}-config
+                  key: git-branch
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "driftguard.fullname" . }}-config
+                  key: aws-region
+            - name: TERRAFORM_STATE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "driftguard.fullname" . }}-config
+                  key: terraform-state-key
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "driftguard.fullname" . }}-secrets
+                  key: github-token
+            volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            resources:
+              {{- toYaml .Values.resources | nindent 14 }}
+          volumes:
+          - name: config
+            configMap:
+              name: {{ include "driftguard.fullname" . }}-config
+          restartPolicy: OnFailure
+{{- end }}

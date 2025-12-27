@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: driftguard-config
+  namespace: driftguard
+data:
+  config.yaml: |
+    # DriftGuard Configuration
+    git:
+      branch: "main"
+    aws:
+      region: "us-east-1"
+      account_id: ""
+    github:
+      token: ""
+    logging:
+      level: "INFO"
+      format: "json"
+      output: "stdout"
+    output:
+      format: "json"
+      destination: "stdout"

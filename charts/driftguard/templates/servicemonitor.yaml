@@ -1,0 +1,17 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "driftguard.fullname" . }}-servicemonitor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "driftguard.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "driftguard.selectorLabels" . | nindent 6 }}
+  endpoints:
+  - port: metrics
+    interval: {{ .Values.serviceMonitor.interval | default "30s" }}
+    path: {{ .Values.serviceMonitor.path | default "/metrics" }}
+{{- end }}

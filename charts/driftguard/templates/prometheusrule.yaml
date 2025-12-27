@@ -1,0 +1,43 @@
+{{- if .Values.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "driftguard.fullname" . }}-alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "driftguard.labels" . | nindent 4 }}
+spec:
+  groups:
+  - name: driftguard
+    rules:
+    {{- if .Values.prometheusRule.highCriticalDriftRate.enabled }}
+    - alert: HighCriticalDriftRate
+      expr: rate(driftguard_drift_by_severity{severity="critical"}[{{ .Values.prometheusRule.highCriticalDriftRate.window | default "10m" }}]) > {{ .Values.prometheusRule.highCriticalDriftRate.threshold | default "0.1" }}
+      for: {{ .Values.prometheusRule.highCriticalDriftRate.for | default "5m" }}
+      labels:
+        severity: {{ .Values.prometheusRule.highCriticalDriftRate.severity | default "warning" }}
+      annotations:
+        summary: "High rate of critical infrastructure drift detected"
+        description: "DriftGuard detected >1 critical drift every {{ .Values.prometheusRule.highCriticalDriftRate.window | default "10m" }}"
+    {{- end }}
+    {{- if .Values.prometheusRule.driftGuardDown.enabled }}
+    - alert: DriftGuardDown
+      expr: up{job="{{ include "driftguard.fullname" . }}"} == 0
+      for: {{ .Values.prometheusRule.driftGuardDown.for | default "2m" }}
+      labels:
+        severity: {{ .Values.prometheusRule.driftGuardDown.severity | default "critical" }}
+      annotations:
+        summary: "DriftGuard instance is down"
+        description: "DriftGuard has been down for more than {{ .Values.prometheusRule.driftGuardDown.for | default "2m" }}"
+    {{- end }}
+    {{- if .Values.prometheusRule.highRemediationFailureRate.enabled }}
+    - alert: HighRemediationFailureRate
+      expr: rate(driftguard_remediation_attempts_total[{{ .Values.prometheusRule.highRemediationFailureRate.window | default "10m" }}]) - rate(driftguard_remediation_success_total[{{ .Values.prometheusRule.highRemediationFailureRate.window | default "10m" }}]) > {{ .Values.prometheusRule.highRemediationFailureRate.threshold | default "0.5" }}
+      for: {{ .Values.prometheusRule.highRemediationFailureRate.for | default "5m" }}
+      labels:
+        severity: {{ .Values.prometheusRule.highRemediationFailureRate.severity | default "warning" }}
+      annotations:
+        summary: "High remediation failure rate"
+        description: "More than {{ mul (float64 .Values.prometheusRule.highRemediationFailureRate.threshold | default "0.5") 100 }}% of remediation attempts are failing"
+    {{- end }}
+{{- end }}

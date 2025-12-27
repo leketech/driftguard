@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: driftguard-servicemonitor
+  namespace: driftguard
+  labels:
+    app: driftguard
+spec:
+  selector:
+    matchLabels:
+      app: driftguard
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

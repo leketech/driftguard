@@ -1,0 +1,69 @@
+# Example Kubernetes deployment for DriftGuard
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: driftguard
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: driftguard-config
+  namespace: driftguard
+data:
+  git-repo-url: "https://github.com/your-org/your-iac-repo.git"
+  git-branch: "main"
+  aws-region: "us-east-1"
+  terraform-state-key: "terraform/state.tfstate"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: driftguard-secrets
+  namespace: driftguard
+type: Opaque
+data:
+  github-token: "base64-encoded-token"  # echo -n 'your-token' | base64
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: driftguard
+  namespace: driftguard
+spec:
+  schedule: "*/30 * * * *"  # Run every 30 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: driftguard
+          containers:
+          - name: driftguard
+            image: driftguard:latest
+            env:
+            - name: GIT_REPO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: git-repo-url
+            - name: GIT_BRANCH
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: git-branch
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: aws-region
+            - name: TERRAFORM_STATE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: terraform-state-key
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: driftguard-secrets
+                  key: github-token
+          restartPolicy: OnFailure

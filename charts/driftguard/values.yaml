@@ -1,0 +1,63 @@
+# Default values for driftguard
+
+# Deployment configuration
+replicaCount: 1
+
+# Image configuration
+image:
+  repository: driftguard
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# DriftGuard configuration
+config:
+  git:
+    repoUrl: ""
+    branch: "main"
+  aws:
+    region: "us-east-1"
+    accountId: ""
+    terraformStateKey: ""
+  github:
+    token: ""
+
+# Kubernetes resource requests and limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# CronJob schedule
+schedule: "*/30 * * * *"
+
+# Environment
+env: dev
+
+# Service Monitor configuration
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /metrics
+
+# Prometheus Rule configuration
+prometheusRule:
+  enabled: false
+  highCriticalDriftRate:
+    enabled: true
+    threshold: 0.1
+    window: 10m
+    for: 5m
+    severity: warning
+  driftGuardDown:
+    enabled: true
+    for: 2m
+    severity: critical
+  highRemediationFailureRate:
+    enabled: true
+    threshold: 0.5
+    window: 10m
+    for: 5m
+    severity: warning

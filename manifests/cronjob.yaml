@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: driftguard
+  namespace: driftguard
+spec:
+  schedule: "*/30 * * * *"  # Run every 30 minutes
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "8000"
+            prometheus.io/path: "/metrics"
+        spec:
+          serviceAccountName: driftguard
+          containers:
+          - name: driftguard
+            image: driftguard:latest
+            env:
+            - name: GIT_REPO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: git-repo-url
+            - name: GIT_BRANCH
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: git-branch
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: driftguard-config
+                  key: aws-region
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: driftguard-secrets
+                  key: github-token
+            volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+          volumes:
+          - name: config
+            configMap:
+              name: driftguard-config
+          restartPolicy: OnFailure

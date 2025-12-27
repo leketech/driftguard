@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: driftguard-alerts
+  namespace: driftguard
+spec:
+  groups:
+  - name: driftguard
+    rules:
+    - alert: HighCriticalDriftRate
+      expr: rate(driftguard_drift_by_severity{severity="critical"}[10m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High rate of critical infrastructure drift detected"
+        description: "DriftGuard detected >1 critical drift every 10 minutes"
+    - alert: DriftGuardDown
+      expr: up{job="driftguard"} == 0
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "DriftGuard instance is down"
+        description: "DriftGuard has been down for more than 2 minutes"
+    - alert: HighRemediationFailureRate
+      expr: rate(driftguard_remediation_attempts_total[10m]) - rate(driftguard_remediation_success_total[10m]) > 0.5
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High remediation failure rate"
+        description: "More than 50% of remediation attempts are failing"

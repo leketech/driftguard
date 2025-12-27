@@ -1,0 +1,23 @@
+remediation:
+  auto_apply:
+    - environment: dev
+      namespaces: ["default", "staging"]
+      resources:
+        - "*"
+    - environment: prod
+      namespaces: []
+      resources: []  # ← requires manual approval
+drift_rules:
+  ignore:
+    - aws_instance.tags.Terraform
+    - k8s_pod.status.hostIP
+    - kafka_topic.config.retention.ms  # Allow retention time drift in some cases
+  critical:
+    - aws_security_group.ingress
+    - k8s_deployment.spec.template.spec.containers.image
+    - kafka_topic.config.replication.factor  # Critical for data durability
+    - kafka_topic.config.min.insync.replicas  # Critical for data durability
+    - kafka_acl.resource_type  # Critical for security
+  warning:
+    - kafka_topic.config.partitions  # Should be changed carefully
+    - kafka_topic.config.num.partitions  # Should be changed carefully

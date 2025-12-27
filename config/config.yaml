@@ -1,0 +1,40 @@
+# DriftGuard Configuration File
+
+# Git Repository Settings
+git:
+  repo_url: ""  # Will be set via GIT_REPO_URL environment variable
+  branch: "main"  # Will be set via GIT_BRANCH environment variable
+
+# AWS Settings
+aws:
+  region: ""  # Will be set via AWS_REGION environment variable
+  account_id: ""  # Will be set via AWS_ACCOUNT_ID environment variable
+  terraform_state_key: ""  # Will be set via TERRAFORM_STATE_KEY environment variable
+
+# Kafka Settings
+kafka:
+  bootstrap_servers: "localhost:9092"  # Will be set via KAFKA_BOOTSTRAP_SERVERS environment variable
+  security_protocol: "PLAINTEXT"  # Options: PLAINTEXT, SASL_SSL, SSL
+  sasl_mechanism: ""  # Options: PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, etc.
+  sasl_username: ""  # Will be set via KAFKA_SASL_USERNAME environment variable
+  sasl_password: ""  # Will be set via KAFKA_SASL_PASSWORD environment variable
+  ssl_ca_location: ""  # Path to CA certificate file
+  ssl_certificate_location: ""  # Path to client certificate file
+  ssl_key_location: ""  # Path to client key file
+  topics_to_monitor: []  # List of topics to monitor for drift
+  consumer_group: "driftguard-consumer"
+
+# GitHub Settings
+github:
+  token: ""  # Will be set via GITHUB_TOKEN environment variable
+
+# Logging Settings
+logging:
+  level: "INFO"
+  format: "json"
+  output: "stdout"  # Can be "stdout", "s3", or "file"
+
+# Output Settings
+output:
+  format: "json"
+  destination: "stdout"  # Can be "stdout", "s3", or "file"

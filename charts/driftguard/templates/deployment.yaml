@@ -1,0 +1,58 @@
+{{- if not .Values.schedule }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "driftguard.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "driftguard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "driftguard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "driftguard.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "driftguard.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: metrics
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: GIT_REPO_URL
+              value: {{ .Values.config.git.repoUrl | quote }}
+            - name: GIT_BRANCH
+              value: {{ .Values.config.git.branch | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.config.aws.region | quote }}
+            - name: TERRAFORM_STATE_KEY
+              value: {{ .Values.config.aws.terraformStateKey | quote }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "driftguard.fullname" . }}-secrets
+                  key: github-token
+          {{- if .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "driftguard.fullname" . }}-config
+{{- end }}
