@@ -38,16 +38,20 @@ class K8sDetector:
         """
         logger.info("Getting desired Kubernetes state from Helm...")
         
-        # Clone the Git repo to a different directory
+        # Use platform-appropriate temp directory
+        import tempfile
+        import os
+        temp_dir = tempfile.mkdtemp(prefix="driftguard_k8s_")
+        repo_path = os.path.join(temp_dir, "k8s_iac_repo")
+        
         subprocess.run([
             "git", "clone", 
             self.config['git']['repo_url'], 
-            "/tmp/k8s_iac_repo"
+            repo_path
         ], check=True)
         
         # Change to repo directory
-        import os
-        os.chdir("/tmp/k8s_iac_repo")
+        os.chdir(repo_path)
         
         # Check if there are any Helm charts in the repo
         import os
@@ -69,7 +73,7 @@ class K8sDetector:
         # Run helm template for each chart found
         for chart_dir in helm_chart_dirs:
             chart_name = os.path.basename(chart_dir)
-            output_dir = f"/tmp/helm_templates_{chart_name}"
+            output_dir = os.path.join(temp_dir, f"helm_templates_{chart_name}")
             os.makedirs(output_dir, exist_ok=True)
             
             result = subprocess.run([
@@ -84,23 +88,70 @@ class K8sDetector:
             else:
                 logger.info(f"Successfully processed Helm chart {chart_dir}")
         
-        # Parse the templates (simplified)
-        desired_state = {
-            "deployments": [],
-            "services": [],
-            "configmaps": []
-        }
+        # Parse the generated Helm templates to extract Kubernetes resources
+        desired_state = self._parse_helm_templates(helm_chart_dirs, temp_dir)
         
         return desired_state
+    
+    def _parse_helm_templates(self, helm_chart_dirs: list, temp_dir: str) -> Dict[str, Any]:
+        """
+        Parse generated Helm templates to extract Kubernetes resources
         
-        # Parse the templates (simplified)
-        desired_state = {
-            "deployments": [],
-            "services": [],
-            "configmaps": []
+        Args:
+            helm_chart_dirs: List of Helm chart directories that were processed
+            temp_dir: Temporary directory where Helm templates were generated
+            
+        Returns:
+            Dictionary containing parsed Kubernetes resources
+        """
+        import os
+        import yaml
+        
+        deployments = []
+        services = []
+        configmaps = []
+        
+        # Process each chart's generated templates
+        for chart_dir in helm_chart_dirs:
+            chart_name = os.path.basename(chart_dir)
+            output_dir = os.path.join(temp_dir, f"helm_templates_{chart_name}")
+            
+            # Walk through the output directory to find generated YAML files
+            for root, dirs, files in os.walk(output_dir):
+                for file in files:
+                    if file.endswith((".yaml", ".yml")):
+                        file_path = os.path.join(root, file)
+                        
+                        try:
+                            with open(file_path, 'r') as f:
+                                content = f.read()
+                            
+                            # Parse YAML documents (there might be multiple in one file)
+                            documents = yaml.safe_load_all(content)
+                            
+                            for doc in documents:
+                                if doc is None:
+                                    continue
+                                
+                                if isinstance(doc, dict) and 'kind' in doc:
+                                    kind = doc.get('kind', '').lower()
+                                    
+                                    if kind == 'deployment':
+                                        deployments.append(doc)
+                                    elif kind == 'service':
+                                        services.append(doc)
+                                    elif kind == 'configmap':
+                                        configmaps.append(doc)
+                        except yaml.YAMLError as e:
+                            logger.error(f"Error parsing YAML file {file_path}: {e}")
+                        except Exception as e:
+                            logger.error(f"Error processing file {file_path}: {e}")
+        
+        return {
+            "deployments": deployments,
+            "services": services,
+            "configmaps": configmaps
         }
-        
-        return desired_state
     
     def get_live_state(self) -> Dict[str, Any]:
         """

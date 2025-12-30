@@ -5,7 +5,10 @@ Configuration Loader for DriftGuard
 
 import os
 import yaml
+import logging
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     """
@@ -44,4 +47,78 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     config['kafka']['ssl_key_location'] = os.getenv('KAFKA_SSL_KEY_LOCATION', config['kafka'].get('ssl_key_location'))
     config['kafka']['consumer_group'] = os.getenv('KAFKA_CONSUMER_GROUP', config['kafka'].get('consumer_group', 'driftguard-consumer-group'))
     
+    # Validate configuration
+    validate_config(config)
+    
     return config
+
+def validate_config(config: Dict[str, Any]) -> None:
+    """
+    Validate the loaded configuration
+    
+    Args:
+        config: Configuration dictionary to validate
+        
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    errors = []
+    
+    # Validate Git configuration
+    git_config = config.get('git', {})
+    if not git_config.get('repo_url'):
+        errors.append("Git repository URL is required")
+    elif not isinstance(git_config['repo_url'], str) or not git_config['repo_url'].strip():
+        errors.append("Git repository URL must be a non-empty string")
+    
+    if not git_config.get('branch'):
+        errors.append("Git branch is required")
+    elif not isinstance(git_config['branch'], str) or not git_config['branch'].strip():
+        errors.append("Git branch must be a non-empty string")
+    
+    # Validate AWS configuration
+    aws_config = config.get('aws', {})
+    if not aws_config.get('region'):
+        errors.append("AWS region is required")
+    elif not isinstance(aws_config['region'], str) or not aws_config['region'].strip():
+        errors.append("AWS region must be a non-empty string")
+    
+    if not aws_config.get('account_id'):
+        errors.append("AWS account ID is required")
+    elif not isinstance(aws_config['account_id'], str) or not aws_config['account_id'].strip():
+        errors.append("AWS account ID must be a non-empty string")
+    
+    if not aws_config.get('terraform_state_key'):
+        errors.append("Terraform state key is required")
+    elif not isinstance(aws_config['terraform_state_key'], str) or not aws_config['terraform_state_key'].strip():
+        errors.append("Terraform state key must be a non-empty string")
+    
+    # Validate GitHub configuration
+    github_config = config.get('github', {})
+    if not github_config.get('token'):
+        logger.warning("GitHub token is not set. Some features may not work properly.")
+    elif not isinstance(github_config['token'], str) or not github_config['token'].strip():
+        errors.append("GitHub token must be a non-empty string if provided")
+    
+    # Validate Kafka configuration if provided
+    kafka_config = config.get('kafka', {})
+    if kafka_config.get('bootstrap_servers'):
+        if not isinstance(kafka_config['bootstrap_servers'], str) or not kafka_config['bootstrap_servers'].strip():
+            errors.append("Kafka bootstrap servers must be a non-empty string if provided")
+    
+    # Validate output configuration
+    output_config = config.get('output', {})
+    destination = output_config.get('destination', 'stdout')
+    if destination not in ['stdout', 's3', 'file']:
+        errors.append(f"Output destination '{destination}' is not valid. Must be one of: stdout, s3, file")
+    
+    # Validate logging configuration
+    logging_config = config.get('logging', {})
+    log_level = logging_config.get('level', 'INFO')
+    if log_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+        errors.append(f"Log level '{log_level}' is not valid. Must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    
+    if errors:
+        error_msg = "Configuration validation failed with the following errors:\n" + "\n".join([f"  - {error}" for error in errors])
+        logger.error(error_msg)
+        raise ValueError(error_msg)

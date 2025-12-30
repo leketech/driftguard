@@ -4,6 +4,9 @@ Unit tests for DriftGuard models
 """
 
 import unittest
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from agent.models import DriftSeverity, DriftType, DriftReport, RemediationAction, Config
 
 class TestModels(unittest.TestCase):
@@ -24,6 +27,7 @@ class TestModels(unittest.TestCase):
     def test_drift_report_model(self):
         """Test DriftReport model creation"""
         report = DriftReport(
+            drift_id="test-drift-id-1",
             resource_type="aws_instance",
             resource_id="i-1234567890abcdef0",
             drift_type=DriftType.AWS,

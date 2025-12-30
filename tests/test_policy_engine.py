@@ -6,7 +6,9 @@ Unit tests for DriftGuard policy engine
 import unittest
 import tempfile
 import os
+import sys
 from unittest.mock import patch, mock_open
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from agent.policy_engine import PolicyEngine
 from agent.models import DriftReport, DriftType, DriftSeverity
 
@@ -62,6 +64,7 @@ drift_rules:
     def test_classify_severity_ignored(self):
         """Test classifying drift as ignored"""
         report = DriftReport(
+            drift_id="test-drift-id-1",
             resource_type="aws_instance",
             resource_id="i-1234567890abcdef0",
             drift_type=DriftType.AWS,
@@ -78,6 +81,7 @@ drift_rules:
     def test_classify_severity_critical(self):
         """Test classifying drift as critical"""
         report = DriftReport(
+            drift_id="test-drift-id-2",
             resource_type="aws_security_group",
             resource_id="sg-12345678",
             drift_type=DriftType.AWS,
@@ -94,6 +98,7 @@ drift_rules:
     def test_classify_severity_warning(self):
         """Test classifying drift as warning (default)"""
         report = DriftReport(
+            drift_id="test-drift-id-3",
             resource_type="aws_instance",
             resource_id="i-1234567890abcdef0",
             drift_type=DriftType.AWS,

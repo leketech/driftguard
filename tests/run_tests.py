@@ -17,6 +17,23 @@ def run_all_tests():
     start_dir = os.path.dirname(__file__)
     suite = loader.discover(start_dir, pattern='test_*.py')
     
+    # Add specific test files if needed
+    # This ensures all test files are included in the discovery
+    additional_tests = [
+        'test_diff_analyzer',
+        'test_config_loader_extended',
+        'test_aws_detector',
+        'test_k8s_detector'
+    ]
+    
+    for test_module in additional_tests:
+        try:
+            test_suite = loader.loadTestsFromName(f'tests.{test_module}')
+            suite.addTests(test_suite)
+        except AttributeError:
+            # Module might not exist, continue
+            pass
+    
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     

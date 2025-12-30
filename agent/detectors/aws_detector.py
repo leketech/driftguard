@@ -39,15 +39,20 @@ class AWSDetector:
             if repo_url.startswith('https://github.com/'):
                 repo_url = repo_url.replace('https://github.com/', f'https://{github_token}@github.com/')
         
+        # Use platform-appropriate temp directory
+        import tempfile
+        import os
+        temp_dir = tempfile.mkdtemp(prefix="driftguard_aws_")
+        repo_path = os.path.join(temp_dir, "aws_iac_repo")
+        
         subprocess.run([
             "git", "clone", 
             repo_url, 
-            "/tmp/aws_iac_repo"
+            repo_path
         ], check=True, env={'GIT_TERMINAL_PROMPT': '0'})
         
         # Change to repo directory
-        import os
-        os.chdir("/tmp/aws_iac_repo")
+        os.chdir(repo_path)
         
         try:
             # Initialize Terraform
@@ -59,19 +64,81 @@ class AWSDetector:
                 "-json"
             ], capture_output=True, text=True, check=True)
             
-            # Parse the state (simplified)
-            desired_state = {
-                "resources": [],
-                "outputs": []
-            }
+            # Parse the Terraform state JSON
+            terraform_state = json.loads(result.stdout)
+            desired_state = self._parse_terraform_state(terraform_state)
         except subprocess.CalledProcessError as e:
-            logger.warning(f"Terraform command failed: {e}. Using empty desired state.")
-            desired_state = {
-                "resources": [],
-                "outputs": []
-            }
+            logger.error(f"Terraform command failed: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Terraform state JSON: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error parsing Terraform state: {e}")
+            raise
         
         return desired_state
+    
+    def _parse_terraform_state(self, terraform_state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Parse Terraform state JSON to extract resource information
+        
+        Args:
+            terraform_state: Raw Terraform state JSON
+            
+        Returns:
+            Dictionary containing parsed resources and outputs
+        """
+        resources = []
+        
+        # Extract resources from state
+        if 'values' in terraform_state:
+            state_values = terraform_state['values']
+            
+            # Process resources
+            if 'root_module' in state_values:
+                root_module = state_values['root_module']
+                
+                # Process resources in the root module
+                if 'resources' in root_module:
+                    for resource in root_module['resources']:
+                        resource_info = {
+                            'type': resource.get('type', ''),
+                            'name': resource.get('name', ''),
+                            'provider': resource.get('provider_name', ''),
+                            'values': resource.get('values', {}),
+                            'address': resource.get('address', ''),
+                            'mode': resource.get('mode', '')
+                        }
+                        resources.append(resource_info)
+                
+                # Process child modules if they exist
+                if 'child_modules' in root_module:
+                    for module in root_module['child_modules']:
+                        if 'resources' in module:
+                            for resource in module['resources']:
+                                resource_info = {
+                                    'type': resource.get('type', ''),
+                                    'name': resource.get('name', ''),
+                                    'provider': resource.get('provider_name', ''),
+                                    'values': resource.get('values', {}),
+                                    'address': resource.get('address', ''),
+                                    'mode': resource.get('mode', '')
+                                }
+                                resources.append(resource_info)
+        
+        # Extract outputs
+        outputs = {}
+        if 'values' in terraform_state:
+            state_values = terraform_state['values']
+            if 'outputs' in state_values:
+                for output_name, output_value in state_values['outputs'].items():
+                    outputs[output_name] = output_value.get('value', None)
+        
+        return {
+            "resources": resources,
+            "outputs": outputs
+        }
     
     def get_live_state(self) -> Dict[str, Any]:
         """

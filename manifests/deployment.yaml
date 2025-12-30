@@ -20,9 +20,12 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: driftguard
+      imagePullSecrets:
+      - name: ecr-registry
       containers:
       - name: driftguard
-        image: driftguard:latest
+        image: 909807568796.dkr.ecr.us-east-1.amazonaws.com/driftguard:latest
+        imagePullPolicy: Always
         env:
         - name: GIT_REPO_URL
           valueFrom:
@@ -44,10 +47,25 @@ spec:
             secretKeyRef:
               name: driftguard-secrets
               key: github-token
+        ports:
+        - containerPort: 8000
+          name: metrics
         volumeMounts:
         - name: config
           mountPath: /app/config
           readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
       - name: config
         configMap:

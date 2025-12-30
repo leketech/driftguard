@@ -7,6 +7,9 @@ import unittest
 import os
 import tempfile
 from unittest.mock import patch, mock_open
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from agent.config_loader import load_config
 
 class TestConfigLoader(unittest.TestCase):
@@ -20,6 +23,7 @@ git:
   branch: "main"
 aws:
   region: "us-east-1"
+  account_id: "123456789012"
   terraform_state_key: "terraform/state.tfstate"
 github:
   token: "test-token"
@@ -38,6 +42,7 @@ git:
   branch: "main"
 aws:
   region: "us-east-1"
+  account_id: "123456789012"
   terraform_state_key: "terraform/state.tfstate"
 github:
   token: "test-token"
@@ -53,6 +58,7 @@ output:
         "GIT_REPO_URL": "https://github.com/env/repo.git",
         "GIT_BRANCH": "develop",
         "AWS_REGION": "us-west-2",
+        "AWS_ACCOUNT_ID": "987654321098",
         "TERRAFORM_STATE_KEY": "terraform/env-state.tfstate",
         "GITHUB_TOKEN": "env-token"
     })
@@ -64,6 +70,7 @@ output:
         self.assertEqual(config['git']['repo_url'], "https://github.com/env/repo.git")
         self.assertEqual(config['git']['branch'], "develop")
         self.assertEqual(config['aws']['region'], "us-west-2")
+        self.assertEqual(config['aws']['account_id'], "987654321098")
         self.assertEqual(config['aws']['terraform_state_key'], "terraform/env-state.tfstate")
         self.assertEqual(config['github']['token'], "env-token")
         
@@ -77,6 +84,7 @@ git:
   branch: "main"
 aws:
   region: "us-east-1"
+  account_id: "123456789012"
   terraform_state_key: "terraform/state.tfstate"
 github:
   token: "test-token"
@@ -97,6 +105,7 @@ output:
         self.assertEqual(config['git']['repo_url'], "https://github.com/test/repo.git")
         self.assertEqual(config['git']['branch'], "main")
         self.assertEqual(config['aws']['region'], "us-east-1")
+        self.assertEqual(config['aws']['account_id'], "123456789012")
         self.assertEqual(config['aws']['terraform_state_key'], "terraform/state.tfstate")
         self.assertEqual(config['github']['token'], "test-token")
 
