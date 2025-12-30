@@ -25,28 +25,28 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r driftguard/requirements.txt
-        pip install -r driftguard/tests/requirements-test.txt || echo "No test requirements file found"
+        pip install -r tests/requirements-test.txt || echo "No test requirements file found"
         pip install pytest pytest-cov bandit safety
 
     - name: Lint with flake8
       run: |
         pip install flake8
         # Stop pipeline if there are Python syntax errors or undefined names
-        flake8 driftguard/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # Exit-zero treats all errors as warnings
-        flake8 driftguard/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Test with pytest
       run: |
-        python -m pytest driftguard/tests/ -v --cov=driftguard/agent --cov-report=xml --cov-report=html
+        python -m pytest tests/ -v --cov=agent --cov-report=xml --cov-report=html
 
     - name: Run security scan with Bandit
       run: |
-        bandit -r driftguard/agent -ll
+        bandit -r agent -ll
 
     - name: Run dependency check with Safety
       run: |
-        safety check -r driftguard/requirements.txt
+        safety check -r requirements.txt
 
   security-scan:
     runs-on: ubuntu-latest
@@ -61,17 +61,17 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r driftguard/requirements.txt
+        pip install -r requirements.txt
         pip install bandit safety
 
     - name: Run Bandit security scan
       run: |
-        bandit -r driftguard/ -ll -f json -o bandit-report.json || echo "Bandit completed with issues"
+        bandit -r . -ll -f json -o bandit-report.json || echo "Bandit completed with issues"
       continue-on-error: true
 
     - name: Run Safety dependency check
       run: |
-        safety check -r driftguard/requirements.txt --json --output=safety-report.json || echo "Safety completed with issues"
+        safety check -r requirements.txt --json --output=safety-report.json || echo "Safety completed with issues"
       continue-on-error: true
 
   build:
@@ -94,8 +94,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: driftguard/
-        file: driftguard/Dockerfile
+        context: .
+        file: Dockerfile
         push: true
         tags: |
           driftguard/driftguard:latest
@@ -123,11 +123,11 @@ jobs:
     - name: Deploy to development cluster
       run: |
         # Replace placeholders in Kubernetes manifests
-        sed -i "s|driftguard:latest|driftguard:${{ github.sha }}|g" driftguard/manifests/deployment.yaml
-        kubectl apply -f driftguard/manifests/namespace.yaml
-        kubectl apply -f driftguard/manifests/rbac.yaml
-        kubectl apply -f driftguard/manifests/configmap.yaml
-        kubectl apply -f driftguard/manifests/deployment.yaml
+        sed -i "s|driftguard:latest|driftguard:${{ github.sha }}|g" manifests/deployment.yaml
+        kubectl apply -f manifests/namespace.yaml
+        kubectl apply -f manifests/rbac.yaml
+        kubectl apply -f manifests/configmap.yaml
+        kubectl apply -f manifests/deployment.yaml
 
   deploy-prod:
     runs-on: ubuntu-latest
@@ -160,8 +160,8 @@ jobs:
     - name: Deploy to production cluster
       run: |
         # Replace placeholders in Kubernetes manifests
-        sed -i "s|driftguard:latest|driftguard:${{ github.sha }}|g" driftguard/manifests/deployment.yaml
-        kubectl apply -f driftguard/manifests/namespace.yaml
-        kubectl apply -f driftguard/manifests/rbac.yaml
-        kubectl apply -f driftguard/manifests/configmap.yaml
-        kubectl apply -f driftguard/manifests/deployment.yaml
+        sed -i "s|driftguard:latest|driftguard:${{ github.sha }}|g" manifests/deployment.yaml
+        kubectl apply -f manifests/namespace.yaml
+        kubectl apply -f manifests/rbac.yaml
+        kubectl apply -f manifests/configmap.yaml
+        kubectl apply -f manifests/deployment.yaml
