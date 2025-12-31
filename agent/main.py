@@ -234,7 +234,7 @@ def run_scheduler():
 def start_health_server():
     """Start the health check server in a separate thread"""
     port = int(os.getenv('HEALTH_CHECK_PORT', '8000'))
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)  # nosec B104:hardcoded_bind_all_interfaces
     logger.info(f"Starting health check server on port {port}")
     server.serve_forever()
 
