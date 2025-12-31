@@ -18,6 +18,7 @@ class K8sDetector:
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        self._dummy_client = False  # Initialize as False
         try:
             # Try to load in-cluster config first
             k8s_config.load_incluster_config()
@@ -25,9 +26,11 @@ class K8sDetector:
             # Fall back to kubeconfig
             try:
                 k8s_config.load_kube_config()
-            except FileNotFoundError:
+            except (FileNotFoundError, k8s_config.ConfigException):
                 # If no kubeconfig, set up dummy config
                 logger.warning("No Kubernetes configuration found. Using dummy config.")
+                # Set flag to indicate dummy client should be used
+                self._dummy_client = True
         
     def get_desired_state(self) -> Dict[str, Any]:
         """
@@ -161,6 +164,16 @@ class K8sDetector:
             Dictionary containing the live Kubernetes state
         """
         logger.info("Getting live Kubernetes state from cluster...")
+        
+        if self._dummy_client:
+            # Return empty state for testing purposes
+            logger.info("Using dummy client for testing")
+            return {
+                "namespaces": [],
+                "deployments": [],
+                "services": [],
+                "configmaps": []
+            }
         
         # Initialize Kubernetes clients
         v1 = client.CoreV1Api()
