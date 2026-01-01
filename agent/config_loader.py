@@ -10,16 +10,21 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
+def load_config(config_path: str = None) -> Dict[str, Any]:
     """
     Load configuration from YAML file and environment variables
     
     Args:
-        config_path: Path to the configuration file
+        config_path: Path to the configuration file. If None, uses default location.
         
     Returns:
         Dictionary containing the configuration
     """
+    if config_path is None:
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Config is at driftguard/config/config.yaml (one level up from agent/)
+        config_path = os.path.join(script_dir, '..', 'config', 'config.yaml')
     # Load config from YAML file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)

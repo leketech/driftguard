@@ -20,9 +20,16 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 # Set up logging
+# Set up logging
+log_dir = os.path.join(os.getcwd(), 'logs', 'driftguard')
+os.makedirs(log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(os.path.join(log_dir, 'agent.log'))
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -31,7 +38,6 @@ try:
     from config_loader import load_config
     from detectors.aws_detector import AWSDetector
     from detectors.k8s_detector import K8sDetector
-    from detectors.kafka_detector import KafkaDetector
     from diff_analyzer import DiffAnalyzer
     from policy_engine import PolicyEngine
     from reporter import Reporter
@@ -39,6 +45,12 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import required modules: {e}")
     sys.exit(1)
+
+try:
+    from detectors.kafka_detector import KafkaDetector
+except ImportError:
+    KafkaDetector = None
+    logger.warning("KafkaDetector module not found, Kafka monitoring will be disabled")
 
 # Initialize monitoring
 monitoring = DriftGuardMonitoring()
@@ -89,14 +101,18 @@ def run_drift_detection():
         kafka_bootstrap_servers = kafka_config.get('bootstrap_servers', '')
 
         if kafka_bootstrap_servers:
-            try:
-                kafka_detector = KafkaDetector(config)
-                logger.info("Kafka detector initialized successfully")
-                kafka_enabled = True
-            except Exception as e:
-                logger.error(f"Failed to initialize Kafka detector: {e}")
-                monitoring.record_error('kafka_init_error', 'kafka_detector')
+            if KafkaDetector is None:
+                logger.warning("Kafka configured but KafkaDetector module is missing. skipping.")
                 kafka_enabled = False
+            else:
+                try:
+                    kafka_detector = KafkaDetector(config)
+                    logger.info("Kafka detector initialized successfully")
+                    kafka_enabled = True
+                except Exception as e:
+                    logger.error(f"Failed to initialize Kafka detector: {e}")
+                    monitoring.record_error('kafka_init_error', 'kafka_detector')
+                    kafka_enabled = False
         else:
             logger.info("Kafka not configured, disabling Kafka functionality")
             kafka_enabled = False
