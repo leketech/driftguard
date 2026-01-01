@@ -6,7 +6,7 @@ Policy Engine for DriftGuard
 import yaml
 import logging
 from typing import List, Dict, Any
-from models import DriftReport, RemediationAction, DriftSeverity
+from .models import DriftReport, RemediationAction, DriftSeverity
 import os
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ Diff Analyzer for DriftGuard
 import logging
 import hashlib
 from typing import Dict, Any, List
-from models import DriftReport, DriftType, DriftSeverity
+from .models import DriftReport, DriftType, DriftSeverity
 
 logger = logging.getLogger(__name__)
 
